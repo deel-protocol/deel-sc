@@ -14,7 +14,13 @@ npx hardhat ignition deploy ./ignition/modules/Lock.ts
 
 ## Chainlink Lanes
 
- ### Lanes on Sepolia testnet
+CCIP Documentation: https://docs.chain.link/ccip
+Chainlink Faucet: https://chain.link/faucets
+Local Simulator: https://github.com/smartcontractkit/chainlink-local
+
+Complete list of testnet Lanes: https://docs.chain.link/ccip/supported-networks/v1_2_0/testnet
+
+### Lanes on Sepolia testnet
 
 | Router address | 0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59 |
 | ---            | ---                                        |
@@ -24,8 +30,9 @@ npx hardhat ignition deploy ./ignition/modules/Lock.ts
 
 #### Arbitrum testnet
 
-| OnRamp address             | 0xe4Dd3B16E09c016402585a8aDFdB4A18f772a07e |
+| Parameter                  | Value                                      |
 | ---                        | ---                                        |
+| OnRamp address             | 0xe4Dd3B16E09c016402585a8aDFdB4A18f772a07e |
 | Destination chain selector | 3478487238524512106                        |
 
 | Aggregate Rate Limit | Value                          |

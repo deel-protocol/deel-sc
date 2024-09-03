@@ -6,6 +6,11 @@ hardhat/README.md
 `cp hardhat/.env.example hardhat/.env`
 hardhat/README.md
 
+Networks
+* Sepolia
+* Arbitrum Sepoli
+* Optimism Sepolia
+
 ## Layer Zero
 `cp lz_oapp/.env.example lz_oapp/.env`
 lz_oapp/README.md
