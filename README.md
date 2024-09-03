@@ -2,6 +2,9 @@
 `cp hardhat/.env.example hardhat/.env`
 hardhat/README.md
 
+## Chainlink CCIP
+`cp hardhat/.env.example hardhat/.env`
+hardhat/README.md
 
 ## Layer Zero
 `cp lz_oapp/.env.example lz_oapp/.env`
