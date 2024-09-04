@@ -1,17 +1,19 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-ethers";
+
 import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-ethers";
 //import "@nomicfoundation/hardhat-foundry";
-import "@typechain/hardhat";
-import "hardhat-gas-reporter";
-import "solidity-coverage";
+import "@nomicfoundation/hardhat-ignition";
 import "@nomicfoundation/hardhat-verify";
+import "@typechain/hardhat";
+import "hardhat-abi-exporter";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
+import "hardhat-gas-reporter";
 import "hardhat-watcher";
-
+import "solidity-coverage";
 
 // If not set, it uses ours Alchemy's default API key.
 // You can get your own at https://dashboard.alchemyapi.io
@@ -21,6 +23,8 @@ const deployerPrivateKey =
   process.env.DEPLOYER_PRIVATE_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 // If not set, it uses ours Etherscan default API key.
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY || "DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW";
+
+const basescanApiKey = process.env.BASESCAN_API_KEY;
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -158,7 +162,8 @@ const config: HardhatUserConfig = {
     clear: true,
     flat: true,
     only: [
-      "CCIPLocalSimulator",
+      "CCIPClient",
+      "DeelProtocol",
       "Kinto",
     ],
     spacing: 2,
@@ -167,7 +172,10 @@ const config: HardhatUserConfig = {
   },
   // configuration for harhdat-verify plugin
   etherscan: {
-    apiKey: `${etherscanApiKey}`,
+    apiKey: {
+      "baseSepolia": `${basescanApiKey}`,
+      "sepolia": `${etherscanApiKey}`,
+    },
     customChains: [
       {
         network: "optimismSepolia",
@@ -177,6 +185,14 @@ const config: HardhatUserConfig = {
           browserURL: "https://sepolia-optimism.etherscan.io/",
         },
       },
+      //{
+      //  network: "baseSepolia",
+      //  chainId: 84532,
+      //  urls: {
+      //    apiURL: "https://api-sepolia-optimistic.etherscan.io/api",
+      //    browserURL: "https://sepolia-optimism.etherscan.io/",
+      //  },
+      //},
     ],
   },
   // configuration for etherscan-verify from hardhat-deploy plugin
@@ -186,7 +202,7 @@ const config: HardhatUserConfig = {
     },
   },
   sourcify: {
-    enabled: false,
+    enabled: true,
   },
 };
 
