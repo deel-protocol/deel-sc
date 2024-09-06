@@ -9,14 +9,14 @@ import {DataLocation} from "@ethsign/sign-protocol-evm/src/models/DataLocation.s
 // [x] Have a way to link to the existing on-chain SP instance and schema
 // [x] Force both parties to confirm they've met each other IRL before making an attestation
 
-contract Attestingreputation is Ownable {
+contract WorkerReputation is Ownable {
   ISP public spInstance;
   uint64 public schemaId;
-  mapping(uint256 data => address worker) public attestedreputation;
+  mapping(uint256 data => address worker) public workerReputation;
 
   error ConfirmationAddressMismatch();
 
-  event DidMeetIRL(address partyA, address partyB, uint64 attestationId);
+  event didAttestReputation(uint256 data, address worker, uint64 attestationId);
 
   constructor() Ownable(_msgSender()) {}
 
@@ -28,8 +28,8 @@ contract Attestingreputation is Ownable {
     schemaId = schemaId_;
   }
 
-  function claimMetIRL(address partyB) external {
-    metIRLMapping[_msgSender()] = partyB;
+  function verifyreputation(uint256 data) external {
+    workerReputation[data] = data;
   }
 
   function confirmMetIRL(
