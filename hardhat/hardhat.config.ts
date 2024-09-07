@@ -86,6 +86,11 @@ const config: HardhatUserConfig = {
       url: `https://opt-sepolia.g.alchemy.com/v2/${providerApiKey}`,
       accounts: [deployerPrivateKey],
     },
+    morphHolesky: {
+      url: `https://rpc-quicknode-holesky.morphl2.io`,
+      accounts: [deployerPrivateKey],
+      chainId:2810
+    },
     //polygon: {
     //  url: `https://polygon-mainnet.g.alchemy.com/v2/${providerApiKey}`,
     //  accounts: [deployerPrivateKey],

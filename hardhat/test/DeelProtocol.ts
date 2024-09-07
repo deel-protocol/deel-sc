@@ -6,6 +6,8 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import hre from "hardhat";
 
+//CCIPSimulator
+
 let zeroAddress = ethers.ZeroAddress;
 
 let owner;
@@ -17,30 +19,54 @@ let jobValue1  = ethers.parseUnits("1000", 18); // 1 Thousand tokens
 let routerAddress;
 let feeTokenAddress;
 
+let networks = [
+  {
+    chainId: 11155111,
+    selector: 16015286601757825753n,
+    routerAddress:"",
+    isMain: true,
+  },
+  {
+    chainId: 11155111,
+    selector: 16015286601757825753n,
+    routerAddress:"",
+    isMain: true,
+  },
+]
+
 //await expect().not.to.be.reverted;
 //await expect().to.be.revertedWith();
 //await expect();
 //expect().to.equal();
 //await expect(contract.call()).to.be.revertedWithCustomError( contract, "SomeCustomError");
+// contract CCIPSimulator is CCIPLocalSimulator {
 
-describe("DeelProtcol", function () {
+describe("DeelProtocol", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
   async function stockDeployment() {
     const [owner, boss1Address, worker1Address ] = await hre.ethers.getSigners();
 
-    const Deel = await hre.ethers.getContractFactory("DeelProtocol");
-    const deel = await Deel.deploy();
+    const CCIP = await hre.ethers.getContractFactory("CCIPSimulator");
+    const ccip = await CCIP.deploy();
+    let ccipConfig = await ccip.configuration();
 
-    return { deel, owner, boss1Address, worker1Address, };
+    const Deel = await hre.ethers.getContractFactory("DeelProtocol");
+    const deel = await Deel.deploy(ccipConfig[1], ccipConfig[4], networks[0].chainId);
+
+    return { deel, owner, boss1Address, worker1Address };
   }
 
   async function populateJobs() {
     const [owner, boss1Address, worker1Address ] = await hre.ethers.getSigners();
 
+    const CCIP = await hre.ethers.getContractFactory("CCIPSimulator");
+    const ccip = await CCIP.deploy();
+    let ccipConfig = await ccip.configuration();
+
     const Deel = await hre.ethers.getContractFactory("DeelProtocol");
-    const deel = await Deel.deploy();
+    const deel = await Deel.deploy(ccipConfig[1], ccipConfig[4], networks[0].chainId);
 
     for( let i = 0; i < 10; i++) {
       let newValue = jobValue1 + BigInt(i);
@@ -64,7 +90,7 @@ describe("DeelProtcol", function () {
   describe("Job Management", function () {
     describe("Adding Jobs", function () {
 
-      it("Should Store the correct values to the job", async function () {
+      it("Should Store the correct values to the job on mainchain", async function () {
 
         const { deel, owner, boss1Address } = await loadFixture(stockDeployment);
 
@@ -89,14 +115,9 @@ describe("DeelProtcol", function () {
       it.skip("Should transfer tokens to contract", async function () {
       });
 
-    });
-
-    describe("Job Taking", function () {
-      it.skip("Should emit an event on withdrawals", async function () {
-        const { deel, owner, boss1Address, jobCount} = await loadFixture(populateJobs);
-        expect(jobCount).to.be.equal(10);
-
+      it.skip("Should Store the correct values to the job on childchain", async function () {
       });
+
     });
 
     describe("Job listing", function () {
@@ -132,5 +153,84 @@ describe("DeelProtcol", function () {
         await expect(deel.listJobs(10, 10)).to.be.revertedWith("Start position out of bounds");
       });
     });
+
+    describe("Mainchain Job application ", function () {
+
+      it("Should count job application reputation on mainchain", async function () {
+
+        const { deel, owner, boss1Address, worker1Address, jobCount} = await loadFixture(populateJobs);
+
+        await deel.connect(worker1Address).applyForJob(2);
+        let newRep = await deel.reputation(worker1Address.address);
+
+        expect(newRep.applied).to.be.equal(1);
+
+      });
+
+      it("Should record job Application on mainchain", async function () {
+
+        const { deel, owner, boss1Address, worker1Address, jobCount} = await loadFixture(populateJobs);
+
+        let jobId = 2;
+        await deel.connect(worker1Address).applyForJob(jobId);
+
+        let applicationSender = await deel.applicationSenders(jobId, 0);
+        let applicationChainSeletor  = await deel.applicationChainSeletor(jobId, 0);
+        let currentChainSelector  = await deel.chainSelector();
+
+        expect(applicationSender).to.be.equal(worker1Address.address, "Job applicant doensn't match");
+        expect(applicationChainSeletor).to.be.equal(currentChainSelector, "Wrong applicant chainSelector");
+
+        let appliedJob = await deel.jobs(jobId);
+
+        expect(appliedJob.applicantCount).to.be.equal(1, "Job application count is incorrect");
+
+      });
+
+    });
+
+
+    describe("Mainchain Select Applicant", function () {
+
+      it("Should record job as assigned", async function () {
+      });
+
+    });
+
+    describe.skip("Childchain Job application", function () {
+
+      it.skip("Should count job application reputation", async function () {
+
+        //const { deel, owner, boss1Address, worker1Address, jobCount} = await loadFixture(populateJobs);
+        //
+        //await deel.connect(worker1Address).applyForJob(2);
+        //let newRep = await deel.reputation(worker1Address.address);
+        //
+        //expect(newRep.applied).to.be.equal(1);
+
+      });
+
+      it.skip("Should record job Application", async function () {
+
+        //const { deel, owner, boss1Address, worker1Address, jobCount} = await loadFixture(populateJobs);
+        //
+        //let jobId = 2;
+        //await deel.connect(worker1Address).applyForJob(jobId);
+        //
+        //let applicationSender = await deel.applicationSenders(jobId, 0);
+        //let applicationChainSeletor  = await deel.applicationChainSeletor(jobId, 0);
+        //let currentChainSelector  = await deel.chainSelector();
+        //
+        //expect(applicationSender).to.be.equal(worker1Address.address, "Job applicant doensn't match");
+        //expect(applicationChainSeletor).to.be.equal(currentChainSelector, "Wrong applicant chainSelector");
+        //
+        //let appliedJob = await deel.jobs(jobId);
+        //
+        //expect(appliedJob.applicantCount).to.be.equal(1, "Job application count is incorrect");
+
+      });
+
+    });
+
   });
 });
