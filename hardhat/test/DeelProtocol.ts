@@ -132,5 +132,8 @@ describe("DeelProtcol", function () {
         await expect(deel.listJobs(10, 10)).to.be.revertedWith("Start position out of bounds");
       });
     });
+    describe("attestation signing", function () {
+      it("should ")
+    })
   });
 });
