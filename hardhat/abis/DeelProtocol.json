@@ -15,6 +15,11 @@
         "internalType": "uint64",
         "name": "_chainSelector",
         "type": "uint64"
+      },
+      {
+        "internalType": "address",
+        "name": "main",
+        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
@@ -135,6 +140,19 @@
         "internalType": "address",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "JOB_POSTING_FEE_AMOUNT",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",

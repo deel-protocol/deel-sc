@@ -6,9 +6,7 @@ import { IRouterClient } from "@chainlink/contracts-ccip/src/v0.8/ccip/interface
 import { IERC20 } from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-solidity/v4.8.3/contracts/interfaces/IERC20.sol";
 // import {CCIPClientExample} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPClientExample.sol";
 import {CCIPLocalSimulator} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
-
 import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
-
 
 // import "hardhat/console.sol";
 
@@ -62,9 +60,11 @@ contract DeelProtocol is CCIPReceiver {
     uint256 chainSelector;
   }
 
-  uint256 public constant MAIN_CHAINID = 11155111; // Eth Sepolia
-  uint64 public constant MAIN_CHAIN_SELECTOR = 16015286601757825753; // Eth Sepolia
-  address public immutable MAIN_CONTRACT_ADDRESS = address(0); // Eth Sepolia
+  uint256 public constant MAIN_CHAINID = 84532; // Eth Sepolia
+  uint64 public constant MAIN_CHAIN_SELECTOR = 10344971235874465080; // Eth Sepolia
+  uint256 public constant JOB_POSTING_FEE_AMOUNT = 43000000000000; // ~ .1 usd
+
+  address public immutable MAIN_CONTRACT_ADDRESS;
   address public immutable FEES_VAULT;
   uint256 public jobCount;
   uint256 public chainid;
@@ -98,9 +98,12 @@ contract DeelProtocol is CCIPReceiver {
     _;
   }
 
-  constructor(address router, address feeToken, uint64 _chainSelector) CCIPReceiver(address(router)) {
+  constructor(address router, address feeToken, uint64 _chainSelector, address main ) CCIPReceiver(address(router)) {
+
+    MAIN_CONTRACT_ADDRESS = main;
     chainid = block.chainid;
     chainSelector = _chainSelector;
+
 
     s_feeToken = IERC20(feeToken);
     s_feeToken.approve(address(router), type(uint256).max);
@@ -133,8 +136,10 @@ contract DeelProtocol is CCIPReceiver {
     newJob.originChain = block.chainid; // TODO: use chain selectors
 
     // Todo, transfer fees and funds to protocol
-    // IERC20(feeToken).transferFrom(msg.sender, FEES_VAULT, JOB_POSTING_FEE_AMOUNT);
-    // IERC20(currency).transferFrom(msg.sender, FEES_VAULT, value);
+
+    IERC20(feeToken).transferFrom(msg.sender, FEES_VAULT, JOB_POSTING_FEE_AMOUNT);
+    IERC20(currency).transferFrom(msg.sender, FEES_VAULT, value);
+
 
     emit JobAdded(jobCount, msg.sender);
     jobCount++;
@@ -164,6 +169,7 @@ contract DeelProtocol is CCIPReceiver {
   ///////////////////
   // JOB Application
   ///////////////////
+
   function applyForJob(uint256 jobId) external {
 
     // console.log(103, ">>>>>>>>>>>>>>>>>");
@@ -209,18 +215,17 @@ contract DeelProtocol is CCIPReceiver {
   ///////////////////////////
   // JobApplication Selected
   ///////////////////////////
+
   function selectApplicant(uint256 jobId) external {
 
     // TODO: enable multichain
-    // if(onChildChain()) {
-    //   bytes memory payload = abi.encodePacked(jobId, msg.sender, chainSelector);
-    //   bytes memory message = abi.encodePacked(Actions.APPLY, payload);
-    //   _sendDataPayFeeToken(MAIN_CHAIN_SELECTOR, abi.encode(MAIN_CONTRACT_ADDRESS), message);
-    // }else{
-
-    _saveAplicationSelection(jobId, msg.sender, chainSelector);
-
-    // }
+    if(onChildChain()) {
+      bytes memory payload = abi.encodePacked(jobId, msg.sender, chainSelector);
+      bytes memory message = abi.encodePacked(Actions.APPLY, payload);
+      _sendDataPayFeeToken(MAIN_CHAIN_SELECTOR, abi.encode(MAIN_CONTRACT_ADDRESS), message);
+    }else{
+      _saveAplicationSelection(jobId, msg.sender, chainSelector);
+    }
 
   }
   function _recieveAplicationSelectionMessage(Client.Any2EVMMessage memory message, bytes memory payload) internal {
@@ -261,31 +266,10 @@ contract DeelProtocol is CCIPReceiver {
   }
 
 
+  ///////////////////////////
+  // Listing
+  ///////////////////////////
 
-  // function recieveJobApplication(
-  //   bytes memory data
-  // ) external {
-  //   //TODO: only router
-  //
-  //   (string memory action, uint256 jobId, address sender) = abi.decode(data, (string, uint256, address));
-  //
-  //
-  //   if(jobId < jobCount) revert InvalidJob();
-  //
-  //   Job storage job = jobs[jobId];
-  //   if(job.status != Status.TAKEABLE) revert IncorrectJobStatus(0);
-  //
-  //   //TODO: fix job.taker
-  //   job.taker = address(0);
-  //   job.destinyChain = block.chainid;
-  //   job.status = Status.TAKEN;
-  //
-  //   // TODO: send message to origin chain
-  //   if(job.originChain != block.chainid) {
-  //     // Message job taken
-  //   }
-  //
-  // }
 
   function listJobs(uint256 startPosition, uint256 size) public view returns (Job[] memory) {
     require(startPosition < jobCount, "Start position out of bounds");

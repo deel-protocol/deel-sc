@@ -86,8 +86,13 @@ const config: HardhatUserConfig = {
       url: `https://opt-sepolia.g.alchemy.com/v2/${providerApiKey}`,
       accounts: [deployerPrivateKey],
     },
+    //holeskyTestnet: {
+    //  url: `https://ethereum-holesky-rpc.publicnode.com/`,
+    //  accounts: [deployerPrivateKey],
+    //  chainId: 17000
+    //},
     morphHolesky: {
-      url: `https://rpc-quicknode-holesky.morphl2.io`,
+      url: ` https://rpc-quicknode-holesky.morphl2.io`,
       accounts: [deployerPrivateKey],
       chainId:2810
     },
@@ -152,7 +157,7 @@ const config: HardhatUserConfig = {
     buildtest: {
       tasks: [
         "compile",
-        { command: "test", params: { parallel: false, bail: false } },
+        { command: "test", params: { parallel: false, bail: true } },
       ],
       files: ["./test/**/*", "./contracts/**/*"],
       verbose: true,
@@ -170,6 +175,8 @@ const config: HardhatUserConfig = {
       "CCIPClient",
       "DeelProtocol",
       "Kinto",
+      "WETH9",
+      "IWETH9",
     ],
     spacing: 2,
     pretty: false,
@@ -177,10 +184,11 @@ const config: HardhatUserConfig = {
   },
   // configuration for harhdat-verify plugin
   etherscan: {
-    apiKey: {
-      "baseSepolia": `${basescanApiKey}`,
-      "sepolia": `${etherscanApiKey}`,
-    },
+    apiKey: `${etherscanApiKey}`,
+    //apiKey: {
+    //  "baseSepolia": `${basescanApiKey}`,
+    //  "sepolia": `${etherscanApiKey}`,
+    //},
     customChains: [
       {
         network: "optimismSepolia",
