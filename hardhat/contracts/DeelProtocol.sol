@@ -113,14 +113,13 @@ contract DeelProtocol is CCIPReceiver, Ownable {
     CCIPReceiver(address(router))
     Ownable(msg.sender) {
 
-
     MAIN_CONTRACT_ADDRESS = main;
     chainid = block.chainid;
     chainSelector = _chainSelector;
 
 
     s_feeToken = IERC20(feeToken);
-    s_feeToken.approve(address(router), type(uint256).max);
+    // s_feeToken.approve(address(router), type(uint256).max);
     FEES_VAULT  = address(this);
   }
 
