@@ -32,8 +32,8 @@ let networks = [
     isMain: true,
   },
   {
-    name:"base sepolia",
-    chainId: 11155111,
+    name:"baseSepolia",
+    chainId: 84532,
     selector: 10344971235874465080,
     routerAddress:"",
     isMain: true,

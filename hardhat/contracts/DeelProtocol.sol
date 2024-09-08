@@ -8,16 +8,22 @@ import { IERC20 } from "@chainlink/contracts-ccip/src/v0.8/vendor/openzeppelin-s
 import {CCIPLocalSimulator} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
 import {CCIPReceiver} from "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 
+import {ISP} from "@ethsign/sign-protocol-evm/src/interfaces/ISP.sol";
+import {Attestation} from "@ethsign/sign-protocol-evm/src/models/Attestation.sol";
+import {DataLocation} from "@ethsign/sign-protocol-evm/src/models/DataLocation.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
 // import "hardhat/console.sol";
 
 // TODO: separate DeelProtocol to its own file
 // TODO: resolve owner
-contract DeelProtocol is CCIPReceiver {
+contract DeelProtocol is CCIPReceiver, Ownable {
   error InvalidConfig();
   error InvalidChain(uint64 chainSelector);
 
   event MessageSent(bytes32 messageId);
   event MessageReceived(bytes32 messageId);
+  event didAttestWork(address poster, address worker, uint64 attestationId);
 
   enum Status {
     NOT_CREATED,
@@ -40,7 +46,7 @@ contract DeelProtocol is CCIPReceiver {
     uint256 posted;
     uint256 applied;
     uint256 assigned;
-    uint256 deliver;
+    uint256 delivered;
     uint256 unfulfiled;
   }
 
@@ -70,11 +76,16 @@ contract DeelProtocol is CCIPReceiver {
   uint256 public chainid;
   uint64 public chainSelector;
   IERC20 public s_feeToken;
+  ISP public spInstance;
+  uint64 public schemaId;
 
   mapping(uint64 destChainSelector => bytes extraArgsBytes) public s_chains;
   mapping(uint256 => Job) public jobs;
   mapping(address => Reputation) public reputation;
   mapping(address => bytes) public arweaveHash;
+  mapping(address worker => address poster) public jobCompletion;
+
+
   // mapping(uint256 => JobApplication) public jobApplications;
 
   mapping(uint256 => address[]) public applicationSenders;
@@ -98,7 +109,10 @@ contract DeelProtocol is CCIPReceiver {
     _;
   }
 
-  constructor(address router, address feeToken, uint64 _chainSelector, address main ) CCIPReceiver(address(router)) {
+  constructor(address router, address feeToken, uint64 _chainSelector, address main )
+    CCIPReceiver(address(router))
+    Ownable(msg.sender) {
+
 
     MAIN_CONTRACT_ADDRESS = main;
     chainid = block.chainid;
@@ -172,20 +186,13 @@ contract DeelProtocol is CCIPReceiver {
 
   function applyForJob(uint256 jobId) external {
 
-    // console.log(103, ">>>>>>>>>>>>>>>>>");
-    // console.log(104, "");
-    // console.log(onChildChain());
-
-    // TODO: enable multichain
-    // if(onChildChain()) {
-    //   bytes memory payload = abi.encodePacked(jobId, msg.sender, chainSelector);
-    //   bytes memory message = abi.encodePacked(Actions.APPLY, payload);
-    //   _sendDataPayFeeToken(MAIN_CHAIN_SELECTOR, abi.encode(MAIN_CONTRACT_ADDRESS), message);
-    // }else{
-
+    if(onChildChain()) {
+      bytes memory payload = abi.encodePacked(jobId, msg.sender, chainSelector);
+      bytes memory message = abi.encodePacked(Actions.APPLY, payload);
+      _sendDataPayFeeToken(MAIN_CHAIN_SELECTOR, abi.encode(MAIN_CONTRACT_ADDRESS), message);
+    }else{
       _saveJobApplication(jobId, msg.sender, chainSelector);
-
-    // }
+    }
 
   }
 
@@ -194,7 +201,6 @@ contract DeelProtocol is CCIPReceiver {
 
     (uint256 jobId, address sender, uint64 _chainSelector) = abi.decode(payload, (uint256, address, uint64));
     // (string memory action, uint256 jobId, address sender) = abi.decode(data, (string, uint256, address));
-    // console.log(190, ">>>>>>>>>>>>>>>>>");
     _saveJobApplication(jobId, sender, _chainSelector);
   }
 
@@ -218,7 +224,6 @@ contract DeelProtocol is CCIPReceiver {
 
   function selectApplicant(uint256 jobId) external {
 
-    // TODO: enable multichain
     if(onChildChain()) {
       bytes memory payload = abi.encodePacked(jobId, msg.sender, chainSelector);
       bytes memory message = abi.encodePacked(Actions.APPLY, payload);
@@ -252,9 +257,54 @@ contract DeelProtocol is CCIPReceiver {
   // Job deliver
   ///////////////////////////
 
-  function _recieveJobDeliverMessage(Client.Any2EVMMessage memory message, bytes memory payload) internal {
-    (uint256 jobId, address sender, uint64 _chainSelector) = abi.decode(payload, (uint256, address, uint64));
-    _saveJobDeliverMessage(jobId, sender, _chainSelector);
+
+  function deliverWork(
+    uint256 jobId,
+    string memory jobTitle
+  ) external {
+
+    if(onChildChain()) {
+      bytes memory payload = abi.encodePacked(jobId, msg.sender, chainSelector, jobTitle);
+      bytes memory message = abi.encodePacked(Actions.DELIVER, payload);
+      _sendDataPayFeeToken(MAIN_CHAIN_SELECTOR, abi.encode(MAIN_CONTRACT_ADDRESS), message);
+    }else{
+      _saveJobDeliver(jobId, msg.sender, chainSelector, jobTitle);
+    }
+
+  }
+
+  function _saveJobDeliver(
+    uint256 jobId,
+    address sender,
+    uint64 _chainSelector,
+    string memory jobTitle
+  ) internal {
+
+    Job storage job = jobs[jobId];
+
+    require(job.taker == sender, "Worker is not selected applicang");
+    if(job.status != Status.TAKEN || job.status != Status.DELIVERED) revert IncorrectJobStatus(0);
+
+    job.status = Status.DELIVERED;
+    reputation[sender].delivered += 1;
+
+    uint64 attestationID = attestCompletedWork(job.owner, job.taker, jobTitle, job.value);
+
+  }
+
+  function _recieveJobDeliverMessage(
+    Client.Any2EVMMessage memory message,
+    bytes memory payload
+  ) internal {
+
+    (
+      uint256 jobId,
+      address sender,
+      uint64 _chainSelector,
+      string memory jobTitle
+    ) = abi.decode(payload, (uint256, address, uint64, string));
+
+    _saveJobDeliver(jobId, sender, chainSelector, jobTitle);
   }
 
   function _saveJobDeliverMessage(uint256 jobId, address sender, uint64 _chainSelector) internal {
@@ -319,6 +369,44 @@ contract DeelProtocol is CCIPReceiver {
     }
 
   }
+
+  function attestCompletedWork(
+    address owner,
+    address worker,
+    string memory jobTitle,
+    uint256 price
+  ) public  returns(uint64) {
+
+    bytes memory data = abi.encode(owner, worker, jobTitle, price);
+
+    bytes[] memory recipients = new bytes[](2);
+    recipients[0] = abi.encode(owner);
+    recipients[1] = abi.encode(worker);
+
+    Attestation memory a = Attestation({
+      schemaId: schemaId,
+      linkedAttestationId: 0,
+      attestTimestamp: 0,
+      revokeTimestamp: 0,
+      attester: address(this),
+      validUntil: 0,
+      dataLocation: DataLocation.ONCHAIN,
+      revoked: false,
+      recipients: recipients,
+      data: data // SignScan assumes this is from `abi.encode(...)`
+    });
+    uint64 attestationId = spInstance.attest(a, "", "", "");
+    return attestationId;
+  }
+
+  function setSPInstance(address instance) external onlyOwner {
+    spInstance = ISP(instance);
+  }
+
+  function setSchemaID(uint64 schemaId_) external onlyOwner {
+    schemaId = schemaId_;
+  }
+
 
   /// @notice sends data to receiver on dest chain. Assumes address(this) has sufficient feeToken.
   function _sendDataPayFeeToken(

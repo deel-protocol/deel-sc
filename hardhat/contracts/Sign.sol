@@ -1,6 +1,7 @@
 import {ISP} from "@ethsign/sign-protocol-evm/src/interfaces/ISP.sol";
 import {Attestation} from "@ethsign/sign-protocol-evm/src/models/Attestation.sol";
 import {DataLocation} from "@ethsign/sign-protocol-evm/src/models/DataLocation.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // [x] Have a way to link to the existing on-chain SP instance and schema
 // [x] Force both parties to confirm they've met each other IRL before making an attestation
